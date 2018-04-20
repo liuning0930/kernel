@@ -1,0 +1,3 @@
+[submodule "git/kernels/staging"]
+	path = git/kernels/staging
+	url = https://github.com/liuning0930/kernel.git
