@@ -1,0 +1,140 @@
+* HOWTO do Linux kernel development
+** Introduction
+   由于kernel内核大部分都是有C语言编写的，好的C语言水平对于kernel开发是必须的.
+   下列的书是有助于加强C的水平：
+   1. “The C Programming Language” by Kernighan and Ritchie [Prentice Hall]
+   2. “Practical C Programming” by Steve Oualline [O’Reilly]
+   3. “C: A Reference Manual” by Harbison and Steele [Prentice Hall]
+
+   kernel是用GNU C 和GNU toolchain编写的。虽然它遵循ISO C89标准，它仍然用了很多标准中没有的扩展. Kernel是一个独立的C环境，没有依赖于标准的C库，所有有些标准C的部分是不支持的。
+   肯定的是 long long 和float不支持。
+   请记住这些，你现在正在尝试如何与已经存在的组织工作。它里面包含各种各色的高学历，高水平的人. 里面的标准是之前建立的，对于一个又大有广懒散的团队是非常有效的。不要期望人们为了你和你公司
+   特地的修改标准和准则。
+   
+** Legal Issues
+   Linux kernel源代码的发布是基于GPL.
+   对于普遍的问题和答案，请看：
+   https://www.gnu.org/licenses/gpl-faq.html
+
+** Documentation
+   Linux kernel 源代码树有大量的很有价值的文档来学习如何与kernel底层交互.当一个新特征加入到kernel, 建议你创建文档来说明应该如何使用这些特征.
+
+   这里有一列表文件关于kernel源代码树要求了解的:
+*** Readme
+    This file gives a short background on the Linux kernel and describes what is necessary to do to configure and build the kernel. People who are new to the kernel should start here.
+*** Documentation/process/changes.rst
+    This file gives a list of the minimum levels of various software packages that are necessary to build and run the kernel successfully.
+*** Documentation/process/coding-style.rst
+    This describes the Linux kernel coding style, and some of the rationale behind it. All new code is expected to follow the guidelines in this document.
+    Most maintainers will only accept patches if these rules are followed, and many people will only review code if it is in the proper style.
+*** Documentation/process/submitting-patches.rst and Documentation/process/submitting-drivers.rst
+    These files describe in explicit detail how to successfully create and send a patch, including (but not limited to):
+
+    Email contents
+    Email format
+    Who to send it to
+    Following these rules will not guarantee success (as all patches are subject to scrutiny for content and style), but not following them will almost always prevent it.
+
+    Other excellent descriptions of how to create patches properly are:
+
+    “The Perfect Patch”
+    https://www.ozlabs.org/~akpm/stuff/tpp.txt
+    “Linux kernel patch submission format”
+    http://linux.yyz.us/patch-format.html
+    Documentation/process/stable-api-nonsense.rst
+    This file describes the rationale behind the conscious decision to not have a stable API within the kernel, including things like:
+
+    Subsystem shim-layers (for compatibility?)
+    Driver portability between Operating Systems.
+    Mitigating rapid change within the kernel source tree (or preventing rapid change)
+    This document is crucial for understanding the Linux development philosophy and is very important for people moving to Linux from development on other Operating Systems.
+
+*** Documentation/admin-guide/security-bugs.rst
+    If you feel you have found a security problem in the Linux kernel, please follow the steps in this document to help notify the kernel developers, and help solve the issue.
+*** Documentation/process/management-style.rst
+    This document describes how Linux kernel maintainers operate and the shared ethos behind their methodologies. This is important reading for anyone new to kernel development (or anyone simply curious about it), as it resolves a lot of common misconceptions and confusion about the unique behavior of kernel maintainers.
+*** Documentation/process/stable-kernel-rules.rst
+    This file describes the rules on how the stable kernel releases happen, and what to do if you want to get a change into one of these releases.
+*** Documentation/process/kernel-docs.rst
+    A list of external documentation that pertains to kernel development. Please consult this list if you do not find what you are looking for within the in-kernel documentation.
+*** Documentation/process/applying-patches.rst
+    A good introduction describing exactly what a patch is and how to apply it to the different development branches of the kernel.
+
+    kernel里面有很多文档可以自动生成的，通过ReStructuredText。
+    所有的文档可以生成为PDF或者HTML:
+    #+BEGIN_SRC c
+      make pdfdocs
+      make htmldocs
+    #+END_SRC
+
+    文档如果使用ReST markup, 它会在 Documentation/output里面生成。
+    #+BEGIN_SRC c
+      make pdfdocs
+      make htmldocs
+    #+END_SRC
+    
+    如果是DocBook, 它会在Documentation/DocBook/ 里面生成
+    #+BEGIN_SRC c
+      make psdocs
+      make mandocs
+    #+END_SRC
+** Becoming A Kernel Developer
+   如果你不知道有关于Linux kernel开发，你应该看看Linux KernelNewbies 工程：
+   https://kernelnewbies.org
+   https://kernelnewbies.org/FirstKernelPatch
+
+   这里面包含了很多有帮助的邮件list，你可以问绝大对数有关于kernel开发的问题。
+   它还包含了实时IRC频道，你可以去问问题以及里面又很有有用的文档。
+
+*** install kernel注意事项
+    1. 按照https://kernelnewbies.org/OutreachyfirstpatchSetup 网站上步骤，安装的过程中发现需要分配足够的空间才能完全编译成功。
+    2. 如果用虚拟机，尽量多分配内存，提高点配置，这样速度也会快很多。
+*** Make a driver change
+    以下的步骤将允许你改变一个驱动，测试你已经正确编译并且安装已经修改的驱动。
+**** Modifying a driver on native Linux
+     你可以找出哪些驱动在你的系统，并且修改其中一个。
+     首先，你可以用lsmod来看你有哪些驱动，并且找出其中一个来做修改。
+     当你找到一个驱动，你可以在Linux kernel库里面找到他的.c和.h 文件。你可以通过Makefiles找出哪些C文件在驱动库里面。最好方式就是使用git grep命令.
+     #+BEGIN_SRC shell
+       git grep xhci-hcd -- '*Makefile'
+     #+END_SRC
+**** Compile your changes
+     重新编译你的kernel，通过使用make:
+     #+BEGIN_SRC c
+     make -j2
+     #+END_SRC
+     你也许需要修改一些编译的错误。另外你也需要修改任何你造成的warning.
+**** Install your changes
+     当你编译完这个驱动，你需要安装你的修改：
+     #+BEGIN_SRC c
+     sudo make modules_install install
+     #+END_SRC
+**** Test your changes
+     当你完成编译一个kernel，你需要重启并且测试你的修改。
+     #+BEGIN_SRC c
+       dmesg | less
+     #+END_SRC
+*** Runing checkpatch.pl
+    如果你想挑选一个驱动，你可以跑下面的脚本来确认是否符合kernel编码风格
+     #+BEGIN_SRC c
+       perl scripts/checkpatch.pl -f drivers/staging/android/* | less
+     #+END_SRC
+*** Recompiling the driver
+    你需要确定你正在修改的驱动装配成一个模块.跑：
+     #+BEGIN_SRC c
+       make menuconfig
+     #+END_SRC
+     确保你正在工作的驱动作为module编译，你可以改变驱动的编译方式通过输入'm'把它作为一个module.
+     当你再一次编译kernel之后，你需要重启kernel，用modprobe命令加载驱动.
+     NOTE:当看到CONFIG_BROKEN的时候，不要去在drivers工作.如果你跑'make menuconfig'来搜索一个驱动，并且注意到Depends on:那行包含BROKEN, 不要在这个驱动上面工作.
+*** Compiling only part of the kernel
+    这里有几种方法编译kernel的一部分:
+    1. make path/file.o: 这里仅仅编译一个文件. 它也许不能够检查这些改变会影响其他文件。它可能编译哪些在.confing文件里面不能够使用的files，但是这样可能会在一些
+       情形里面失败，例如当一个file包含architecture-specific头文件.
+    2. make path 例如make drivers/staging: 这种方法总是成功的.它什么都不需要做因为这个目录总是存在的.
+    3. make path/ 例如make drivers/staging/： 这种方法进入这个目录并且编译里面的所有文件但是不会试图link modules.
+    4. make M=drivers/staging: 这种看上去试图link之前生成的vmlinux modules，当修改.config 或者在一个git tree上面重新复位，除非使用make -j2来编译其他文件，否则它可能会失败.
+
+       当本地改变一个driver或者staging drives，make path/是一个不错的选择。
+*** Driver dependencies
+
